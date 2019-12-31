@@ -1,0 +1,25 @@
+development:
+  adapter: postgresql
+  encoding: utf8
+  database: notif_development
+  username: <%= Rails.application.credentials.db_user %>
+  password: <%= Rails.application.credentials.db_pw %>
+  host: localhost
+  
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+# Do not set this db to the same as development or production.
+
+test: &test
+  adapter: postgresql
+  encoding: utf8
+  database: notif_test
+  username: <%= Rails.application.credentials.db_user %>
+  password: <%= Rails.application.credentials.db_pw %>
+  host: localhost
+
+production:
+  url:  <%= ENV["DATABASE_URL"] %>
+  pool: <%= ENV["DB_POOL"] || ENV['RAILS_MAX_THREADS'] || 5 %>
+cucumber:
+  <<: *test

@@ -1,0 +1,44 @@
+<h2>Notifications sample</h2>
+
+<% if alert %><p style="background-color: red; color: white; padding: 10px"><%= alert %></p><% end %>
+
+<hr>
+
+<h3>SMS notifications</h3>
+<% if @my_sms_pref.nil? or !@my_sms_pref.confirmed? %>
+  <%= form_with(url: optin_notifications_path) do |f| %>
+    <p>Do you want SMS notifications?</p>
+    <%= f.label :my_phone, "Your phone number:" %> <%= f.text_field :my_phone %>
+    <%= f.hidden_field :provider, value: "SMS" %>
+    <%= f.submit %>
+  <% end %>
+<% elsif @my_sms_pref.confirmed? %>
+  <p>You have activated SMS notifications. <%= link_to "Deactivate", optout_notifications_path(provider: 'Sms'), method: :post %></p>
+<% end %>
+
+<hr>
+
+<h3>Telegram notifications</h3>
+<% if @my_telegram_pref.nil? %>
+  <%= form_with(url: optin_notifications_path) do |f| %>
+    <p>Do you want Telegram notifications?</p>
+    <%= f.label :my_phone, "Your phone number:" %> <%= f.text_field :my_phone %>
+    <%= f.hidden_field :provider, value: "Telegram" %>
+    <%= f.submit %>
+  <% end %>
+<% elsif @my_telegram_pref.confirmed? %>
+  <p>You have activated Telegram notifications. <%= link_to "Deactivate", optout_notifications_path(provider: 'Telegram'), method: :post %></p>
+<% else %>
+  <p style="color: red">Please send a Telegram message to our bot in order to confirm that you want notifications. 
+    We are technically unable to send you anything until you write to the bot.</p>
+<% end %>
+
+<hr>
+
+<h3>Send notification</h3>
+<%= form_with(url: send_msg_notifications_path) do |f| %>
+  <p>Enter a message to be sent to all users</p>
+  <%= f.label :message, "Message:" %><br>
+  <%= f.text_area :message, cols: 50, rows: 3 %><br>
+  <%= f.submit "Send" %>
+<% end %>
