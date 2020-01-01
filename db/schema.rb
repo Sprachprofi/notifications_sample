@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_12_15_124638) do
+ActiveRecord::Schema.define(version: 2020_01_01_143032) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -18,7 +18,7 @@ ActiveRecord::Schema.define(version: 2019_12_15_124638) do
   create_table "notification_prefs", force: :cascade do |t|
     t.integer "user_id"
     t.string "provider", limit: 20
-    t.string "provider_id"
+    t.string "provided_id"
     t.string "waiting_confirmation_from"
     t.string "optin_type"
     t.text "optin_history"

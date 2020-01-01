@@ -2,8 +2,8 @@ class NotificationsController < ApplicationController
   before_action :authenticate_user!
 
   def sample_homepage
-    @my_sms_pref = NotificationPref.where(user_id: @current_user_id, provider: "SMS").first
-    @my_telegram_pref = NotificationPref.where(user_id: @current_user_id, provider: "Telegram").first
+    @my_sms_pref = NotificationPref.where(user_id: @current_user_id, provider: "SMS").not_wiped.first
+    @my_telegram_pref = NotificationPref.where(user_id: @current_user_id, provider: "Telegram").not_wiped.first
   end
   
   def send_msg
