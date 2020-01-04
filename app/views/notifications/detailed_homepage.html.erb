@@ -9,12 +9,17 @@
   <%= form_with(url: optin_notifications_path) do |f| %>
     <p>Do you want SMS notifications?</p>
     <%= f.label :my_phone, "Your phone number:" %> <%= f.text_field :my_phone %>
-    <%= f.hidden_field :provider, value: 'SMS' %>
-    <%= f.hidden_field :optin_anything, value: '1' %>
+    <%= f.hidden_field :provider, value: "SMS" %>
+    <p>Notify me about:</p>
+    <%= optin_type_checkboxes %><br>
     <%= f.submit %>
   <% end %>
 <% elsif @my_sms_pref.confirmed? %>
-  <p>You have activated SMS notifications. <%= link_to "Deactivate", optout_notifications_path(provider: 'SMS'), method: :post %></p>
+  <%= form_with(url: change_optin_notification_path(@my_sms_pref)) do |f| %>
+    <p>You have activated SMS notifications to your phone number <%= @my_sms_pref.provided_id %> for the following:</p>
+    <%= optin_type_checkboxes(@my_sms_pref.optin_type) %><br>
+    <%= f.submit 'Change' %> | <%= link_to "Deactivate", optout_notifications_path(provider: 'SMS'), method: :post %>
+  <% end %>
 <% end %>
 
 <hr>
@@ -25,13 +30,17 @@
     <p>Do you want Telegram notifications?</p>
     <%= f.label :my_phone, "Your Telegram username:" %> <%= f.text_field :my_phone %>
     <%= f.hidden_field :provider, value: "Telegram" %>
-    <%= f.hidden_field :optin_anything, value: '1' %>
+    <%= optin_type_checkboxes %><br>
     <%= f.submit %>
   <% end %>
 <% elsif @my_telegram_pref.confirmed? %>
-  <p>You have activated Telegram notifications. <%= link_to "Deactivate", optout_notifications_path(provider: 'Telegram'), method: :post %></p>
+  <%= form_with(url: change_optin_notification_path(@my_telegram_pref)) do |f| %>
+    <p>You have activated Telegram notifications for the following:</p>
+    <%= optin_type_checkboxes(@my_telegram_pref.optin_type) %><br>
+    <%= f.submit 'Change' %> | <%= link_to "Deactivate", optout_notifications_path(provider: 'Telegram'), method: :post %>
+  <% end %>
 <% else %>
-  <p style="color: red">Please go into Telegram and send the message "/start" to @diem25_notif_bot in order to confirm that you want notifications. 
+  <p style="color: red">Please go into Telegram and send the message "/start" to @diem25_notif_bot in order to confirm that you want notifications on <%= @my_telegram_pref.optin_type %>. 
     We are technically unable to send you anything until you write to the bot. Or <%= link_to "deactivate completely", optout_notifications_path(provider: 'Telegram'), method: :post %></p>
 <% end %>
 
@@ -40,6 +49,8 @@
 <h3>Send notification</h3>
 <%= form_with(url: send_msg_notifications_path) do |f| %>
   <p>Enter a message to be sent to all users</p>
+  <p><%= f.label :msg_type, "Topic:" %>
+    <%= f.select :msg_type, NotificationPref::OPTIN_TYPES, selected: 'anything' %></p>
   <%= f.label :message, "Message:" %><br>
   <%= f.text_area :message, cols: 50, rows: 3 %><br>
   <%= f.submit "Send" %>

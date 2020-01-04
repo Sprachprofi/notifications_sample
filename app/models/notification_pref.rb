@@ -1,14 +1,16 @@
 class NotificationPref < ApplicationRecord
 
+  OPTIN_TYPES = ['elections', 'votes', 'events', 'anything']
+
   before_save :remove_blank
 
   validates_presence_of :user_id, :provider
   
   scope :active, -> { where('provided_id IS NOT NULL') }
   scope :not_wiped, -> { where('provided_id IS NOT NULL OR waiting_confirmation_from IS NOT NULL') }
-  scope :wants_msg_type, ->(msg_type) { where("(optin_type = 'all' OR optin_type LIKE ?)", "%#{msg_type}%") }
+  scope :wants_msg_type, ->(msg_type) { where("(optin_type = 'anything' OR optin_type LIKE ?)", "%#{msg_type}%") }
   
-  def self.optin(user_id, provider, confirmation_from, optin_type = 'all')
+  def self.optin(user_id, provider, confirmation_from, optin_type = 'anything')
     confirmation_from = ("Notifier::" + provider).constantize.standardize_preconfirmation_id(confirmation_from)
     raise "Invalid number" if not ("Notifier::" + provider).constantize.valid_preconfirmation_id?(confirmation_from)
     optin = NotificationPref.where(user_id: user_id, provider: provider).first_or_initialize
@@ -28,6 +30,15 @@ class NotificationPref < ApplicationRecord
   
   def confirmed?
     waiting_confirmation_from.nil? and !provided_id.nil?
+  end
+  
+  def change_optin_type!(optin_type)
+    if optin_type.blank?
+      # this is an optout
+      optout(self.user_id, self.provider)
+    else
+      self.update(optin_type: optin_type, optin_history: (Time.now.to_s + " - " + "from now on only desires updates on: #{optin_type}.\n") +  (self.optin_history || ""))
+    end
   end
   
   # this will send a Telegram message to everyone who opted into Telegram messages,
