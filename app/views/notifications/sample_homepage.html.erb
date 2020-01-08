@@ -37,6 +37,24 @@
 
 <hr>
 
+<h3>Viber notifications</h3>
+<% if @my_viber_pref.nil? %>
+  <%= form_with(url: optin_notifications_path) do |f| %>
+    <p>Do you want Viber notifications?</p>
+    <%= f.label :my_phone, "Your Viber username:" %> <%= f.text_field :my_phone %>
+    <%= f.hidden_field :provider, value: "Viber" %>
+    <%= f.hidden_field :optin_anything, value: '1' %>
+    <%= f.submit %>
+  <% end %>
+<% elsif @my_viber_pref.confirmed? %>
+  <p>You have activated Viber notifications. <%= link_to "Deactivate", optout_notifications_path(provider: 'Viber'), method: :post %></p>
+<% else %>
+  <p style="color: red">Please click on <a href="viber://pa?chatURI=diem25_notif_bot&text=/start">viber://pa?chatURI=diem25_notif_bot&text=/start</a> - this will open Viber and prompt you to send the message /start to the DiEM25 bot. 
+    We are technically unable to send you anything until you write to the bot. Or <%= link_to "deactivate completely", optout_notifications_path(provider: 'Viber'), method: :post %></p>
+<% end %>
+
+<hr>
+
 <h3>Send notification</h3>
 <%= form_with(url: send_msg_notifications_path) do |f| %>
   <p>Enter a message to be sent to all users</p>

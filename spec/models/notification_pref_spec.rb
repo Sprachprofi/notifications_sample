@@ -54,7 +54,7 @@ RSpec.describe NotificationPref, type: :model do
   
   it 'remembers the type of notification people opt into and sends accordingly' do 
     NotificationPref.optin(5, 'Sample', 'testID', 'free_stuff').confirm_optin!
-    NotificationPref.optin(6, 'Sample', 'another_testID', 'all').confirm_optin!
+    NotificationPref.optin(6, 'Sample', 'another_testID', 'anything').confirm_optin!
     NotificationPref.optin(7, 'Sample', 'testID', 'free_stuff,bills').confirm_optin!
     user_ids = [5, 6, 7, 8]
     result = NotificationPref.notify(user_ids, "Get a freebie today by visiting our website!", "free_stuff")
@@ -63,5 +63,34 @@ RSpec.describe NotificationPref, type: :model do
     expect(result['Sample']).to eq 2
     result = NotificationPref.notify(user_ids, "New Year newsletter", "newsletter")
     expect(result['Sample']).to eq 1
+  end
+  
+  it 'correctly counts who will receive a (paid) message' do
+    NotificationPref.optin(5, 'Sample', 'testID', 'free_stuff').confirm_optin!
+    NotificationPref.optin(6, 'SMS', '+491234567890', 'anything').confirm_optin!
+    NotificationPref.optin(7, 'Sample', 'another_testID', 'free_stuff,bills').confirm_optin!
+    NotificationPref.optin(8, 'SMS', '+496789012345', 'bills').confirm_optin!
+    user_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    expect(NotificationPref.count_message_recipients(user_ids, 'free_stuff')).to eq 3
+    expect(NotificationPref.count_message_recipients(user_ids, 'bills')).to eq 3
+    expect(NotificationPref.count_paid_message_recipients(user_ids, 'bills')).to eq 2
+    expect(NotificationPref.count_message_recipients(user_ids, 'newsletter')).to eq 1
+    expect(NotificationPref.count_paid_message_recipients(user_ids, 'newsletter')).to eq 1
+  end
+  
+  it 'is able to retrieve unconfirmed users' do
+    first_pref = NotificationPref.optin(1, 'Sample', 'testID1', 'free_stuff')
+    pref = NotificationPref.optin(2, 'Sample', 'testID2', 'free_stuff')
+    found_pref = NotificationPref.find_unconfirmed('Sample', 'testID1', 'Judith')
+    expect(found_pref.user_id).to eq 1
+    expect(found_pref.id).to eq first_pref.id
+  end
+  
+  it 'is able to retrieve unconfirmed users by email' do
+    pref = NotificationPref.optin(1, 'Sample', 'testID1', 'free_stuff')
+    second_pref = NotificationPref.optin(2, 'Sample', 'testID2', 'free_stuff')
+    found_pref = NotificationPref.find_unconfirmed_by_email('Sample', 'test2@test.com') 
+    expect(found_pref.user_id).to eq 2
+    expect(found_pref.id).to eq second_pref.id
   end
 end

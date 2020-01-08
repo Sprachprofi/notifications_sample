@@ -4,11 +4,13 @@ class NotificationsController < ApplicationController
   def sample_homepage
     @my_sms_pref = NotificationPref.where(user_id: @current_user_id, provider: "SMS").not_wiped.first
     @my_telegram_pref = NotificationPref.where(user_id: @current_user_id, provider: "Telegram").not_wiped.first
+    @my_viber_pref = NotificationPref.where(user_id: @current_user_id, provider: "Viber").not_wiped.first
   end
   
   def detailed_homepage
     @my_sms_pref = NotificationPref.where(user_id: @current_user_id, provider: "SMS").not_wiped.first
     @my_telegram_pref = NotificationPref.where(user_id: @current_user_id, provider: "Telegram").not_wiped.first
+    @my_viber_pref = NotificationPref.where(user_id: @current_user_id, provider: "Viber").not_wiped.first
   end
   
   def send_msg
@@ -35,7 +37,13 @@ class NotificationsController < ApplicationController
   end
   
   def webhook
-    # do whatever
+    # receive Viber messages. NOTE: must use HTTPS and send a one-time webhook request to Viber
+    if params['event'] == 'message' and params['message']['type'] == 'text'
+      Notifier::Viber.react_to_msg(params)
+    else
+      puts "Badly-formatted webhook request? #{params}"
+    end
+    head :ok
   end
   
 private

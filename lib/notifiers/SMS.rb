@@ -31,7 +31,7 @@ module Notifier
             to: number,
             from: Rails.application.credentials.twilio_phone_number,
             body: message
-          )
+          ) unless Rails.env.test?
           status = 'success'
         rescue Twilio::REST::RestError
           status = 'error'

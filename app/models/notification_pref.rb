@@ -7,8 +7,32 @@ class NotificationPref < ApplicationRecord
   validates_presence_of :user_id, :provider
   
   scope :active, -> { where('provided_id IS NOT NULL') }
+  scope :awaiting_confirmation, -> { where('provided_id IS NULL AND waiting_confirmation_from IS NOT NULL') }
   scope :not_wiped, -> { where('provided_id IS NOT NULL OR waiting_confirmation_from IS NOT NULL') }
   scope :wants_msg_type, ->(msg_type) { where("(optin_type = 'anything' OR optin_type LIKE ?)", "%#{msg_type}%") }
+  
+  # when a user is replying to our bot, we have to retrieve the matching NotificationPref record,
+  # which may require matching it up to our User database if they indicated the wrong username on our site
+  # As the User table hasn't been implemented yet, this method will exclusively use the username for now.
+  def self.find_unconfirmed(provider, confirmation_from, personal_name, family_name = nil)
+    # Easy case: they provided the right username and we're expecting them already
+    pref = NotificationPref.where(provider: provider, waiting_confirmation_from: confirmation_from).first
+    if pref.nil?
+      # TODO: expand to make use of your User class's personal name and family name, if exists
+     
+    end
+    pref
+  end
+  
+  # when a user is replying to our bot, we have to retrieve the matching NotificationPref record,
+  # which may require matching it up to our emails database if their privacy settings prevent the bot from knowing their username
+  # As the User table hasn't been implemented yet, this method is just using stub data for now.
+  # TODO: replace with a function that actually looks up emails
+  def self.find_unconfirmed_by_email(provider, email) 
+    users = [['1', 'test@test.com'], ['2', 'test2@test.com'], ['3', 'test3@test.com']]
+    this_user = users.detect{ |u| u[1] == email }
+    NotificationPref.where(provider: provider).awaiting_confirmation.where(user_id: this_user[0]).first if this_user
+  end
   
   def self.optin(user_id, provider, confirmation_from, optin_type = 'anything')
     confirmation_from = ("Notifier::" + provider).constantize.standardize_preconfirmation_id(confirmation_from)
@@ -39,6 +63,23 @@ class NotificationPref < ApplicationRecord
     else
       self.update(optin_type: optin_type, optin_history: (Time.now.to_s + " - " + "from now on only desires updates on: #{optin_type}.\n") +  (self.optin_history || ""))
     end
+  end
+  
+  # only a tiny subset of users may actually be subscribed, so this gives a realistic idea of how many messages will go out
+  def self.count_message_recipients(user_ids, msg_type)
+    result = 0
+    providers = NotificationPref.distinct.pluck(:provider)
+    providers.each do |provider|
+      cnt = NotificationPref.active.where(provider: provider).wants_msg_type(msg_type).where(user_id: user_ids).count
+      result += cnt  
+    end
+    result
+  end
+  
+  # only a tiny subset of users may actually be subscribed, so this gives a realistic idea of how many messages we will have to pay for
+  def self.count_paid_message_recipients(user_ids, msg_type)
+    # TODO: expand this once we add another provider that also charges money for messaging
+    cnt = NotificationPref.active.where(provider: 'SMS').wants_msg_type(msg_type).where(user_id: user_ids).count
   end
   
   # this will send a Telegram message to everyone who opted into Telegram messages,

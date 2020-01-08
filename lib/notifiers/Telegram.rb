@@ -28,21 +28,32 @@ module Notifier
     end
     
     def self.react_to_msg(message)
-      case message['text']
-      when '/start'
-        if (pref = NotificationPref.where(provider: 'Telegram', waiting_confirmation_from: message['from']['username']).first)
+      txt = message['text'].strip.downcase 
+      if txt == '/start'
+        if NotificationPref.where(provided_id: message['chat']['id']).first
+          # user was already subscribed
+          send_msg(message['chat']['id'], "You are currently subscribed to receive DiEM25 notifications from me. If you no longer want notifications, write /stop")
+        elsif (pref = NotificationPref.find_unconfirmed('Telegram', message['from']['username'], message['from']['first_name'], message['from']['last_name']))
           # user did everything correctly; confirm their opt-in
           pref.confirm_optin!(message['chat']['id'])
           send_msg(message['chat']['id'], "Hello, #{message['from']['first_name']}. You will now get DiEM25 notifications from me. If you no longer want notifications, write /stop")
-        elsif NotificationPref.where(provided_id: message['chat']['id']).first
-          # user was already subscribed
-          send_msg(message['chat']['id'], "You are currently subscribed to receive DiEM25 notifications from me. If you no longer want notifications, write /stop")
         else
-          # having trouble linking this Telegram user to any DiEM25 user
-          send_msg(message['chat']['id'], "I'm having trouble matching you to any DiEM25 profile. Please go to the Members Area's notifications center, " +
-            "enter your Telegram name (#{message['from']['username']}) there, click Save and then come back to this chat and type /start again in order to confirm.")
+          # having trouble linking this Telegram user to any DiEM25 user, try through email
+          send_msg(message['chat']['id'], "I'm having trouble matching you to any DiEM25 profile; maybe your Telegram privacy settings are too strict. Which email address do you " +
+            "use in order to log into DiEM25?")
         end
-      when '/stop'
+      elsif txt.include?("@")
+        # user identifies themselves through email address because the regular flow didn't work
+        pref = NotificationPref.find_unconfirmed_by_email('Telegram', txt) 
+        if pref
+          pref.confirm_optin!(message['chat']['id'])
+          send_msg(message['chat']['id'], "Thank you! You will now get DiEM25 notifications from me. If you no longer want notifications, write /stop")
+        else
+          # having trouble linking this Telegram user to any DiEM25 user, user must re-enter
+          send_msg(message['chat']['id'], "I'm having trouble matching you to any DiEM25 profile. Please go to https://internal.diem25.org/notifications , " +
+            "enter your Telegram name (#{message['from']['username']}) there, click Save and then come back to this chat and type /start again in order to confirm.")
+        end        
+      elsif txt == '/stop'
         NotificationPref.optout_through_provider('Telegram', message['chat']['id'], message['from']['username'])
         send_msg(message['chat']['id'], "Bye, #{message['from']['first_name']}. You will no longer get DiEM25 notifications from me. To start them again, write /start")
       else 
@@ -84,7 +95,7 @@ module Notifier
  private
 
     def self.make_request(relative_url, params, req_type = 'GET', show_full_response = false)
-      if not Rails.env.test? 
+      if Rails.env.production? 
         raise "You must provide a Telegram bot key in the credentials if you're going to use the Telegram API" unless Rails.application.credentials.telegram_bot_key
         conn = Faraday.new(:url => 'https://api.telegram.org/bot' + Rails.application.credentials.telegram_bot_key + '/')
 
